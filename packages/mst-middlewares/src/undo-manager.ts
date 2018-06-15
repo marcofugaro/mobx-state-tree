@@ -6,6 +6,7 @@ import {
     addMiddleware,
     applyPatch,
     getRoot,
+    getPath,
     createActionTrackingMiddleware,
     IStateTreeNode,
     IModelType,
@@ -115,17 +116,25 @@ const UndoManager = types
             ) => recorder && recorder.undo()
         })
 
+        const removeRootPath = (patches: Array<IJsonPatch>) => {
+          return patches.map((patch: IJsonPatch) => {
+            const targetStorePath = getPath(targetStore)
+            patch.path = patch.path.replace(targetStorePath, '')
+            return patch
+          })
+        }
+
         return {
             addUndoState(recorder: any) {
                 if (replaying || (recorder.patches && recorder.patches.length === 0)) {
-                    // skip recording if this state was caused by undo / redo 
+                    // skip recording if this state was caused by undo / redo
                     // or if patches is empty
                     return
                 }
                 self.history.splice(self.undoIdx)
                 self.history.push({
-                    patches: recorder.patches,
-                    inversePatches: recorder.inversePatches
+                    patches: removeRootPath(recorder.patches),
+                    inversePatches: removeRootPath(recorder.inversePatches)
                 })
                 self.undoIdx = self.history.length
             },
